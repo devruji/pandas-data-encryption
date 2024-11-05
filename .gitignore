@@ -164,3 +164,5 @@ cython_debug/
 
 *.key
 *.csv
+.DS_Store
+.vscode
