@@ -108,7 +108,7 @@ def encrypt_column(input_csv, output_csv, columns) -> None:
         df[column_name] = encrypted_column
 
     # ?: Save the encrypted CSV
-    df.to_csv(output_csv, sep="|", encoding="utf-8", index=False)
+    df.to_csv(output_csv, sep=",", encoding="utf-8", index=False)
     print("-" * 100)
     print("After", "\n", df.head())
     print(f"Encrypted column {columns} and saved to {output_csv}")
