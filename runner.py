@@ -94,15 +94,21 @@ def encrypt_column(input_csv, output_csv, columns) -> None:
                 continue
             iv = os.urandom(16)  # !: AES block size is 16 bytes, so IV is 16 bytes
             cipher = Cipher(
-                algorithms.AES(key), modes.CBC(iv), backend=default_backend()
+                algorithms.AES(key), modes.GCM(iv), backend=default_backend()
             )
             encryptor = cipher.encryptor()
 
             padded_data = pad(str(value).encode())
             encrypted_value = encryptor.update(padded_data) + encryptor.finalize()
+            tag = encryptor.tag  # Extract the authentication tag
+
+            # ?: Encode IV + encrypted value + tag as a base64 string to store in CSV
+            encrypted_column.append(
+                base64.b64encode(iv + encrypted_value + tag).decode()
+            )
 
             # ?: Encode IV + encrypted value as a base64 string to store in CSV
-            encrypted_column.append(base64.b64encode(iv + encrypted_value).decode())
+            # encrypted_column.append(base64.b64encode(iv + encrypted_value).decode())
 
         # ?: Replace the column in the DataFrame with the encrypted data
         df[column_name] = encrypted_column
@@ -120,4 +126,6 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         # TODO: Encrypt a column
-        encrypt_column("./landing/results.csv", "./output/results.csv", sys.argv[1:])
+        encrypt_column(
+            "./landing/results.csv", "./outputs/encrypted/results.csv", sys.argv[1:]
+        )

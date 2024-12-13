@@ -5,6 +5,8 @@ from cryptography.hazmat.primitives import padding
 import base64
 import pandas as pd
 
+# pd.set_option("display.max_columns", None)
+
 
 # ?: Helper function to apply padding
 def pad(data):
@@ -61,17 +63,21 @@ def decrypt_column(input_csv, output_csv, columns):
     print("Before:", "\n", df.head())
 
     # ?: Decrypt the target column
-    decrypted_column = []
     for column in columns:
+        decrypted_column = []
         for encrypted_value in df[column]:
             # ?: Decode the base64 string to get IV + encrypted value
             encrypted_data = base64.b64decode(encrypted_value)
             iv = encrypted_data[:16]  # ?: Extract IV (first 16 bytes)
-            encrypted_value = encrypted_data[16:]  # ?: Extract encrypted data
+            tag = encrypted_data[-16:]
+            encrypted_value = encrypted_data[16:-16]  # ?: Extract encrypted data
 
             cipher = Cipher(
-                algorithms.AES(key), modes.CBC(iv), backend=default_backend()
+                algorithms.AES(key),
+                modes.GCM(initialization_vector=iv, tag=tag),
+                backend=default_backend(),
             )
+
             decryptor = cipher.decryptor()
 
             padded_data = decryptor.update(encrypted_value) + decryptor.finalize()
@@ -81,7 +87,7 @@ def decrypt_column(input_csv, output_csv, columns):
 
             decrypted_column.append(decrypted_value)
 
-        # ?: sReplace the column in the DataFrame with the decrypted data
+        # ?: Replace the column in the DataFrame with the decrypted data
         df[column] = decrypted_column
 
     # ?: Save the decrypted CSV
@@ -92,8 +98,15 @@ def decrypt_column(input_csv, output_csv, columns):
 
 
 if __name__ == "__main__":
-    decrypt_column(
-        "./output/results.csv",
-        "./output/decrypted/results.csv",
-        ["BP_NAME"],
-    )
+    import sys
+
+    if len(sys.argv) == 1:
+        print("Nothing to Encrypt")
+        sys.exit(0)
+    else:
+        # ?: Decrypt columns
+        decrypt_column(
+            input_csv="./output/results.csv",
+            output_csv="./outputs/encrypted/results.csv",
+            columns=sys.argv[1:],
+        )
