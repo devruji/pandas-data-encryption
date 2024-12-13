@@ -1,10 +1,20 @@
+from dotenv import load_dotenv
+
 import os
 
+load_dotenv()  # ?: Load environment variables from the .env file
 
-# Step 1: Generate a 256-bit (32-byte) AES key (run only once to create and save the key)
-def generate_key():
+
+def generate_key() -> None:
+    """
+    Generates a 256-bit (32-byte) AES key and saves it to a file specified by
+    the parameter `key_name` located in the "./keys" directory.
+
+    :param key_name: The name of the key file to write to.
+    :return: None
+    """
     key = os.urandom(32)  # AES-256 requires a 256-bit key (32 bytes)
-    with open("./keys/secret.key", "wb") as key_file:
+    with open(f"./keys/{os.getenv('KEY_NAME')}", "wb") as key_file:
         key_file.write(key)
 
 
