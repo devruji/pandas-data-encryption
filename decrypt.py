@@ -106,7 +106,7 @@ if __name__ == "__main__":
     else:
         # ?: Decrypt columns
         decrypt_column(
-            input_csv="./output/results.csv",
+            input_csv="./outputs/encrypted/results.csv",
             output_csv="./outputs/encrypted/results.csv",
             columns=sys.argv[1:],
         )
