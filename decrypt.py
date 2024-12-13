@@ -2,111 +2,100 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 
+from utils.load_key import load_key
+
 import base64
+import numpy as np
 import pandas as pd
-
-# pd.set_option("display.max_columns", None)
-
-
-# ?: Helper function to apply padding
-def pad(data):
-    """
-    The function `pad` uses PKCS7 padding with a block size of 128 to pad the input
-    data.
-
-    :param data: It looks like the code snippet you provided is a function called
-    `pad` that pads the input data using PKCS7 padding with a block size of 128. The
-    `data` parameter is the input data that you want to pad. You can pass any byte
-    string or data that you want to
-    :return: The function `pad(data)` returns the input data after applying PKCS7
-    padding with a block size of 128.
-    """
-    padder = padding.PKCS7(128).padder()
-    padded_data = padder.update(data) + padder.finalize()
-    return padded_data
 
 
 # ?: Helper function to remove padding
-def unpad(data):
+def unpad(data: bytes) -> bytes:
     """
     The function `unpad` removes padding from data using PKCS7 padding scheme with a
-    block size of 128.
+    block size of 256. It creates an unpadder object with a block size of 256 bits,
+    and then uses this unpadder object to unpad the input data.
 
-    :param data: It seems like the code snippet you provided is attempting to unpad
-    data using PKCS7 padding scheme with a block size of 128. However, you have not
-    provided the actual `data` parameter that needs to be unpadded. Could you please
-    provide the `data` parameter so that I can
+    :param data: The input data that needs to be unpadded.
     :return: The function `unpad(data)` returns the unpadded data after removing
-    padding using PKCS7 padding scheme with a block size of 128.
+    padding using PKCS7 padding scheme with a block size of 256.
     """
-    unpadder = padding.PKCS7(128).unpadder()
+    # ?: Create an unpadder object with a block size of 256 bits
+    unpadder = padding.PKCS7(256).unpadder()
+
+    # ?: Use the unpadder object to unpad the input data
     unpadded_data = unpadder.update(data) + unpadder.finalize()
+
+    # ?: Return the unpadded data
     return unpadded_data
 
 
-def load_key():
+def decrypt_columns(input_csv: str, output_csv: str, columns: list[str]) -> None:
     """
-    The function `load_key` reads and returns the content of a binary file named
-    "secret.key" located in the "./keys" directory.
-    :return: The function `load_key()` is returning the content of the file
-    "./keys/secret.key" as a binary string.
+    Decrypt specified columns in an encrypted CSV file using AES symmetric encryption
+    and save the decrypted CSV to a new file.
+
+    :param input_csv: The file path to the encrypted CSV file to read from.
+    :param output_csv: The file path to the CSV file to write the decrypted data to.
+    :param columns: List of column names to decrypt.
+    :return: None
     """
-    with open("./keys/secret.key", "rb") as key_file:
-        return key_file.read()
+    key = load_key()  # ?: Load the AES encryption key
 
-
-def decrypt_column(input_csv, output_csv, columns):
-    key = load_key()
-
-    # ?: Load the encrypted CSV
+    # ?: Read the encrypted CSV file
     df = pd.read_csv(input_csv, sep=",", encoding="utf-8")
-    print("Before:", "\n", df.head())
 
-    # ?: Decrypt the target column
+    # ?: Decrypt the specified columns
     for column in columns:
         decrypted_column = []
-        for encrypted_value in df[column]:
-            # ?: Decode the base64 string to get IV + encrypted value
-            encrypted_data = base64.b64decode(encrypted_value)
-            iv = encrypted_data[:16]  # ?: Extract IV (first 16 bytes)
-            tag = encrypted_data[-16:]
-            encrypted_value = encrypted_data[16:-16]  # ?: Extract encrypted data
 
+        for encrypted_value in df[column]:
+            if pd.isna(encrypted_value):
+                decrypted_column.append(np.nan)
+                continue
+            # ?: Decode the base64 encoded value
+            encrypted_data = base64.b64decode(encrypted_value)
+            iv = encrypted_data[:16]  # ?: Extract the initialization vector
+            tag = encrypted_data[-16:]  # ?: Extract the authentication tag
+            encrypted_value = encrypted_data[16:-16]  # ?: Extract the encrypted data
+
+            # ?: Setup the AES cipher with the key, IV, and tag
             cipher = Cipher(
                 algorithms.AES(key),
                 modes.GCM(initialization_vector=iv, tag=tag),
                 backend=default_backend(),
             )
+            decryptor = cipher.decryptor()  # ?: Create a decryptor object
 
-            decryptor = cipher.decryptor()
-
+            # ?: Decrypt and unpad the data
             padded_data = decryptor.update(encrypted_value) + decryptor.finalize()
-            decrypted_value = unpad(
-                padded_data
-            ).decode()  # ?: Remove padding and decode to string
+            decrypted_value = unpad(padded_data).decode()
 
-            decrypted_column.append(decrypted_value)
+            decrypted_column.append(decrypted_value)  # ?: Add to the decrypted column
 
-        # ?: Replace the column in the DataFrame with the decrypted data
-        df[column] = decrypted_column
+        df[column] = decrypted_column  # ?: Replace column with decrypted data
 
-    # ?: Save the decrypted CSV
+    # ?: Save the decrypted CSV file
     df.to_csv(output_csv, index=False, encoding="utf-8")
-    print("-" * 100)
-    print("After:", "\n", df.head())
-    print(f"Decrypted column '{columns}' and saved to {output_csv}")
+
+    print(f"[INFO]: Column(s): {columns} decrypted and saved to {output_csv}")
 
 
 if __name__ == "__main__":
+    import os
     import sys
+    from dotenv import load_dotenv
+
+    load_dotenv(".env.shared")
+    load_dotenv(".env.secret")
 
     if len(sys.argv) == 1:
-        print("Nothing to Encrypt")
+        print("Nothing to Decrypt")
         sys.exit(0)
     else:
         # ?: Decrypt columns
-        decrypt_column(
-            input_csv="./outputs/encrypted/results.csv",
-            output_csv="./outputs/encrypted/results.csv",
+        decrypt_columns(
+            input_csv=os.getenv("PATH_ENCRYPTED_CSV"),
+            output_csv=os.getenv("PATH_DECRYPTED_CSV"),
             columns=sys.argv[1:],
         )

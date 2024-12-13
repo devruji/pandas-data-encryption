@@ -1,8 +1,4 @@
-from dotenv import load_dotenv
-
 import os
-
-load_dotenv()  # ?: Load environment variables from the .env file
 
 
 def generate_key() -> None:
