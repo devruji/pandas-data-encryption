@@ -17,15 +17,15 @@ def pad(data: bytes) -> bytes:
     Apply PKCS7 padding to the input data.
 
     This function applies PKCS7 padding to the input data using a block size of
-    256 bits, which is necessary to ensure that the data is a multiple of the
+    128 bits, which is necessary to ensure that the data is a multiple of the
     block size required for encryption algorithms.
 
     :param data: The input data that needs to be padded.
     :return: The padded data after applying PKCS7 padding with a block size of
-    256 bits.
+    128 bits.
     """
-    # ?: Create a padder object with a block size of 256 bits
-    padder = padding.PKCS7(256).padder()
+    # ?: Create a padder object with a block size of 128 bits
+    padder = padding.PKCS7(128).padder()
 
     # ?: Use the padder object to pad the input data
     padded_data = padder.update(data) + padder.finalize()

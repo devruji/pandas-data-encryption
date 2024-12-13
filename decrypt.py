@@ -13,15 +13,15 @@ import pandas as pd
 def unpad(data: bytes) -> bytes:
     """
     The function `unpad` removes padding from data using PKCS7 padding scheme with a
-    block size of 256. It creates an unpadder object with a block size of 256 bits,
+    block size of 128. It creates an unpadder object with a block size of 128 bits,
     and then uses this unpadder object to unpad the input data.
 
     :param data: The input data that needs to be unpadded.
     :return: The function `unpad(data)` returns the unpadded data after removing
-    padding using PKCS7 padding scheme with a block size of 256.
+    padding using PKCS7 padding scheme with a block size of 128.
     """
-    # ?: Create an unpadder object with a block size of 256 bits
-    unpadder = padding.PKCS7(256).unpadder()
+    # ?: Create an unpadder object with a block size of 128 bits
+    unpadder = padding.PKCS7(128).unpadder()
 
     # ?: Use the unpadder object to unpad the input data
     unpadded_data = unpadder.update(data) + unpadder.finalize()
