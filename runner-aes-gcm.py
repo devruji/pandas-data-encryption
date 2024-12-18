@@ -20,9 +20,6 @@ def encrypt_columns(input_csv: str, output_csv: str, columns: List[str]) -> None
     """
     key: bytes = load_key()  # ?: Load the AES encryption key
     aesgcm: AESGCM = AESGCM(key)  # ?: Setup the AES-GCM cipher
-    nonce: bytes = os.urandom(
-        int(os.getenv("NONCE_SIZE"))
-    )  # ?: Generate a random nonce
 
     # ?: Load the CSV file
     dataframe: pd.DataFrame = pd.read_csv(input_csv, sep=r"\|\,", engine="python")
@@ -42,6 +39,9 @@ def encrypt_columns(input_csv: str, output_csv: str, columns: List[str]) -> None
                 encrypted_values.append(np.nan)
                 continue
 
+            nonce: bytes = os.urandom(
+                int(os.getenv("NONCE_SIZE"))
+            )  # ?: Generate a random nonce
             encrypted_value = aesgcm.encrypt(
                 nonce=nonce, data=str(value).encode(), associated_data=None
             )
@@ -112,20 +112,24 @@ if __name__ == "__main__":
     load_dotenv(".env.secret")
     load_dotenv(".env.shared")
 
-    match sys.argv[1]:
-        case "encrypt":
-            # ?: Encrypt a column
-            encrypt_columns(
-                os.getenv("PATH_INPUT_CSV"),
-                os.getenv("PATH_ENCRYPTED_CSV"),
-                sys.argv[2:],
-            )
-        case "decrypt":
-            # ?: Decrypt a column
-            decrypt_columns(
-                os.getenv("PATH_ENCRYPTED_CSV"),
-                os.getenv("PATH_DECRYPTED_CSV"),
-                sys.argv[2:],
-            )
-        case _:
-            raise Exception("Invalid command")
+    if len(sys.argv) == 1:
+        print("Nothing to Encrypt")
+        sys.exit(0)
+    else:
+        match sys.argv[1]:
+            case "encrypt":
+                # ?: Encrypt a column
+                encrypt_columns(
+                    os.getenv("PATH_INPUT_CSV"),
+                    os.getenv("PATH_ENCRYPTED_CSV"),
+                    sys.argv[2:],
+                )
+            case "decrypt":
+                # ?: Decrypt a column
+                decrypt_columns(
+                    os.getenv("PATH_ENCRYPTED_CSV"),
+                    os.getenv("PATH_DECRYPTED_CSV"),
+                    sys.argv[2:],
+                )
+            case _:
+                raise Exception("Invalid command")
