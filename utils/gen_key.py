@@ -1,19 +1,29 @@
 import os
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 
 def generate_key() -> None:
     """
-    Generates a 256-bit (32-byte) AES key and saves it to a file specified by
-    the parameter `key_name` located in the "./keys" directory.
+    Generate a 256-bit AES encryption key and save it to a file.
 
-    :param key_name: The name of the key file to write to.
+    The function uses the AES-GCM algorithm to generate a random 256-bit key.
+    It saves the generated key to a binary file located in the "./keys" directory.
+    The name of the file is specified by the environment variable 'KEY_NAME'.
+
     :return: None
     """
-    key = os.urandom(32)  # AES-256 requires a 256-bit key (32 bytes)
+
+    key = AESGCM.generate_key(bit_length=256)
+
     with open(f"./keys/{os.getenv('KEY_NAME')}", "wb") as key_file:
         key_file.write(key)
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv(".env.secret")
+
     generate_key()
     print("OK")
